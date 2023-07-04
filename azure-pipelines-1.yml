@@ -1,0 +1,39 @@
+trigger:
+- master
+
+variables:
+ tag: '$(Build.BuildId)'
+
+stages:
+- stage: Build
+  displayName: Build Stage
+  jobs:
+  - job: build
+    displayName: build job
+    pool:
+       vmImage: 'ubuntu-latest'
+    steps:
+    - task: Docker@2
+      inputs:
+       containerRegistry: 'sharataksacr'
+       command: 'buildAndPush'
+       Dockerfile: '**/Dockerfile'
+       repository: 'customnginxapp1' #name of the image that we would like to give
+       tags: |
+         $(tag)
+
+    - bash: echo contents in system default working directory; ls -R $(System.DefaultWorkingDirectory)
+    - bash: before copying the content in build artifact directory; ls -R $(Build.ArtifactstagingDirectory)
+    
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: '$(System.DefaultWorkingDirectory)/kube-manifests'
+        Contents: '**'
+        TargetFolder: '$(Build.ArtifactstagingDirectory)'
+        OverWrite: true
+    
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'kube-manifests'
+        publishLocation: 'Container'
